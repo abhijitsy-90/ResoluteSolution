@@ -1,16 +1,26 @@
 const logger = require('./logger');
 let blogModel = require('../models/blog.model')
+const Joi=require('joi');
+
+const BlogSchema = Joi.object({
+    title: Joi.string().min(3).max(40).required(),
+    content: Joi.string().min(18).max(100).required(),
+    Id:Joi.number().required()
+});
 
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 exports.CreateBlogs = async (req, res) => {
     const { Id, title, content } = req.body;
+
+    const { error } = BlogSchema.validate({title,content,Id});
+    if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+    }
     try {
-        if (!title) return res.status(400).json({ error: "title is mandatory " })
-        if (!content) return res.status(400).json({ error: "content is mandatory " })
         const Existedblog = blogModel.find((item) => item?.title == title);
-        if (Existedblog) return res.status(400).json({ error: "This Blog already existed" });
+        if (Existedblog) return res.status(409).json({ error: "This Blog already existed" });
         let BlogId = getRandomInt(50, 1000)
         blogModel.push({ title, author: Id, content, status: "draft", createdAt: new Date(), id: BlogId });
         return res.status(200).json({ message: "Blog created successfully" });
@@ -26,6 +36,7 @@ exports.CreateBlogs = async (req, res) => {
         return res.status(500).send({ status: false, message: err.message })
     }
 }
+
 exports.GetBlogs = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -73,6 +84,10 @@ exports.GetSingleBlogs = async (req, res) => {
 }
 exports.UpdateBlogs = async (req, res) => {
     const { Id, title, content, status } = req.body;
+    const { error } = BlogSchema.validate({title,content,Id});
+    if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+    }
     try {
         if (!title) return res.status(400).json({ error: "title is mandatory " })
         if (!content) return res.status(400).json({ error: "content is mandatory " })

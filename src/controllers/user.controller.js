@@ -1,15 +1,23 @@
 const logger = require('./logger');
 const userModel=require('../models/user.model');
 const bcrypt=require('bcrypt');
-const passport = require('passport');
-const jwt = require('jsonwebtoken');
 const {generateToken}=require('../middlewares/authenticate');
+const Joi=require('joi');
+
+const UserBlogs = Joi.object({
+    email: Joi.string().min(3).max(40).required(),
+    password:Joi.string().required()
+});
 
 function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 exports.Registration=async(req,res)=>{
     const {email,password}=req.body;
+    const { error } = UserBlogs.validate({email,password});
+    if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+    }
     try{
    const hashedPassword=await bcrypt.hash(password,12);
    
@@ -36,8 +44,11 @@ exports.Registration=async(req,res)=>{
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body
-        if (!email) return res.status(404).send({ status: false, message: "email Is mandtory" })
-        if (!password) return res.status(404).send({ status: false, message: "password Is mandtory" })
+
+        const { error } = UserBlogs.validate({email,password});
+    if (error) {
+        return res.status(400).json({ error: error.details[0].message });
+    }
 
         const ExistedData=userModel.find((item)=>item?.email==email);
         if(!ExistedData){
